@@ -4,7 +4,6 @@ import {
   activeEntries,
   DEFAULT_WISDOM,
   localStorageWisdom,
-  mergeWisdom,
   randomKey,
   type WisdomMap,
   type WisdomStorage,
@@ -483,6 +482,3 @@ function RememberPage() {
     </div>
   );
 }
-
-// Keep unused import used by types below happy for tree-shaking safety.
-void mergeWisdom;
