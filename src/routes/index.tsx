@@ -1,10 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  activeEntries,
   DEFAULT_WISDOM,
   localStorageWisdom,
+  randomKey,
+  type WisdomMap,
   type WisdomStorage,
 } from "@/lib/wisdom-storage";
+import {
+  getGistId,
+  getGistToken,
+  setGistId,
+  setGistToken,
+  syncWithGist,
+} from "@/lib/gist-sync";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -39,44 +49,93 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+type SyncStatus = "idle" | "loading" | "syncing" | "ok" | "error" | "disabled";
+
 function RememberPage() {
-  const [items, setItems] = useState<string[]>([]);
-  const [order, setOrder] = useState<number[]>([]);
+  const [items, setItems] = useState<WisdomMap>({});
+  const [order, setOrder] = useState<string[]>([]);
   const [cursor, setCursor] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
   const [draft, setDraft] = useState("");
+  const [tokenDraft, setTokenDraft] = useState("");
+  const [gistIdDraft, setGistIdDraft] = useState("");
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("disabled");
+  const [syncError, setSyncError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const itemsRef = useRef<WisdomMap>({});
+  itemsRef.current = items;
+
+  const buildOrder = useCallback((map: WisdomMap) => {
+    const keys = activeEntries(map).map(([k]) => k);
+    return shuffle(keys);
+  }, []);
 
   // Load once
   useEffect(() => {
     let loaded = storage.load();
-    if (loaded.length === 0) {
-      loaded = DEFAULT_WISDOM;
+    if (Object.keys(loaded).length === 0) {
+      loaded = { ...DEFAULT_WISDOM };
       storage.save(loaded);
     }
     setItems(loaded);
-    setOrder(shuffle(loaded.map((_, i) => i)));
+    setOrder(buildOrder(loaded));
     setCursor(0);
     setHydrated(true);
-  }, []);
+    setTokenDraft(getGistToken());
+    setGistIdDraft(getGistId());
+    setSyncStatus(getGistToken() ? "loading" : "disabled");
+  }, [buildOrder]);
 
   // Persist
   useEffect(() => {
     if (hydrated) storage.save(items);
   }, [items, hydrated]);
 
-  const currentIndex = order[cursor];
-  const current =
-    currentIndex !== undefined ? items[currentIndex] : undefined;
+  const runSync = useCallback(
+    async (phase: "loading" | "syncing" = "syncing") => {
+      if (!getGistToken()) return;
+      setSyncStatus(phase);
+      setSyncError(null);
+      try {
+        const result = await syncWithGist(itemsRef.current);
+        const merged = result.merged;
+        // Only reset order if the active set changed.
+        const prevKeys = new Set(activeEntries(itemsRef.current).map(([k]) => k));
+        const nextKeys = new Set(activeEntries(merged).map(([k]) => k));
+        let sameActive = prevKeys.size === nextKeys.size;
+        if (sameActive) for (const k of prevKeys) if (!nextKeys.has(k)) { sameActive = false; break; }
+        setItems(merged);
+        if (!sameActive) {
+          setOrder(buildOrder(merged));
+          setCursor(0);
+        }
+        setSyncStatus("ok");
+      } catch (e) {
+        setSyncStatus("error");
+        setSyncError(e instanceof Error ? e.message : "Sync failed");
+      }
+    },
+    [buildOrder],
+  );
+
+  // Initial sync on mount when configured
+  useEffect(() => {
+    if (hydrated && getGistToken()) runSync("loading");
+  }, [hydrated, runSync]);
+
+  const currentKey = order[cursor];
+  const currentEntry = currentKey ? items[currentKey] : undefined;
+  const current = currentEntry && currentEntry.op === "add" ? currentEntry.text : undefined;
 
   const advance = useCallback(() => {
-    if (items.length === 0) return;
+    const active = activeEntries(items).map(([k]) => k);
+    if (active.length === 0) return;
     if (cursor + 1 >= order.length) {
-      // New iteration; avoid repeating the last item as the first if possible
-      let next = shuffle(items.map((_, i) => i));
-      if (items.length > 1 && next[0] === order[cursor]) {
+      let next = shuffle(active);
+      if (active.length > 1 && next[0] === order[cursor]) {
         [next[0], next[next.length - 1]] = [next[next.length - 1], next[0]];
       }
       setOrder(next);
@@ -89,50 +148,85 @@ function RememberPage() {
   const handleAdd = () => {
     const text = draft.trim();
     if (!text) return;
-    const newItems = [...items, text];
+    const key = randomKey();
+    const newItems: WisdomMap = {
+      ...items,
+      [key]: { text, op: "add", updatedAt: Date.now() },
+    };
     setItems(newItems);
-    // Insert new item as next-up so user sees it, but keep iteration integrity
-    const newIdx = newItems.length - 1;
     const rest = order.slice(cursor + 1);
-    setOrder([...order.slice(0, cursor + 1), newIdx, ...rest]);
+    setOrder([...order.slice(0, cursor + 1), key, ...rest]);
     setDraft("");
     setAddOpen(false);
     setMenuOpen(false);
+    if (getGistToken()) void runSync();
   };
 
   const handleRemove = () => {
-    if (current === undefined) return;
-    const removeIdx = currentIndex;
-    const newItems = items.filter((_, i) => i !== removeIdx);
-    // Rebuild order: remove references and shift indices > removeIdx down by 1
-    const newOrder = order
-      .filter((i) => i !== removeIdx)
-      .map((i) => (i > removeIdx ? i - 1 : i));
+    if (!currentKey || !currentEntry) return;
+    const newItems: WisdomMap = {
+      ...items,
+      [currentKey]: { ...currentEntry, op: "delete", updatedAt: Date.now() },
+    };
+    const newOrder = order.filter((k) => k !== currentKey);
     setItems(newItems);
-    if (newItems.length === 0) {
+    if (newOrder.length === 0) {
       setOrder([]);
       setCursor(0);
+    } else if (cursor >= newOrder.length) {
+      setOrder(shuffle(activeEntries(newItems).map(([k]) => k)));
+      setCursor(0);
     } else {
-      // Keep cursor position, but clamp; if past end, wrap to reshuffle
-      if (cursor >= newOrder.length) {
-        setOrder(shuffle(newItems.map((_, i) => i)));
-        setCursor(0);
-      } else {
-        setOrder(newOrder);
-      }
+      setOrder(newOrder);
     }
+    setMenuOpen(false);
+    if (getGistToken()) void runSync();
+  };
+
+  const handleSaveSync = async () => {
+    const t = tokenDraft.trim();
+    setGistToken(t);
+    setGistId(gistIdDraft.trim());
+    setSyncOpen(false);
+    setMenuOpen(false);
+    if (!t) {
+      setSyncStatus("disabled");
+      return;
+    }
+    // Merge remote in and push
+    const local = storage.load();
+    setItems(local);
+    void runSync("loading");
+  };
+
+  const handleClearSync = () => {
+    setGistToken("");
+    setGistId("");
+    setTokenDraft("");
+    setGistIdDraft("");
+    setSyncStatus("disabled");
+    setSyncError(null);
+    setSyncOpen(false);
     setMenuOpen(false);
   };
 
   useEffect(() => {
-    if (addOpen) {
-      setTimeout(() => textareaRef.current?.focus(), 50);
-    }
+    if (addOpen) setTimeout(() => textareaRef.current?.focus(), 50);
   }, [addOpen]);
 
-  const showEmpty = hydrated && items.length === 0;
+  const activeCount = useMemo(() => activeEntries(items).length, [items]);
+  const showEmpty = hydrated && activeCount === 0;
+  const wisdomText = current ?? "";
 
-  const wisdomText = useMemo(() => current ?? "", [current]);
+  const statusInfo: Record<SyncStatus, { color: string; label: string }> = {
+    disabled: { color: "", label: "Sync not configured" },
+    idle: { color: "bg-muted-foreground", label: "Sync idle" },
+    loading: { color: "bg-amber-400 animate-pulse", label: "Fetching from Gist…" },
+    syncing: { color: "bg-sky-400 animate-pulse", label: "Syncing…" },
+    ok: { color: "bg-emerald-500", label: "Synced" },
+    error: { color: "bg-red-500", label: syncError ?? "Sync error" },
+  };
+  const status = statusInfo[syncStatus];
 
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
@@ -143,10 +237,11 @@ function RememberPage() {
         <div className="relative">
           <button
             type="button"
-            aria-label="Open menu"
+            aria-label={`Open menu (${status.label})`}
+            title={status.label}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 transition hover:bg-muted hover:text-foreground"
+            className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 transition hover:bg-muted hover:text-foreground"
           >
             <svg
               width="20"
@@ -163,6 +258,12 @@ function RememberPage() {
               <line x1="4" y1="12" x2="20" y2="12" />
               <line x1="4" y1="17" x2="20" y2="17" />
             </svg>
+            {status.color && (
+              <span
+                className={`absolute right-1 top-1 h-2 w-2 rounded-full ring-2 ring-background ${status.color}`}
+                aria-hidden="true"
+              />
+            )}
           </button>
           {menuOpen && (
             <>
@@ -173,7 +274,7 @@ function RememberPage() {
               />
               <div
                 role="menu"
-                className="absolute right-0 z-20 mt-2 w-44 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-lg"
+                className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-lg"
               >
                 <button
                   type="button"
@@ -195,6 +296,41 @@ function RememberPage() {
                 >
                   Remove
                 </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setTokenDraft(getGistToken());
+                    setGistIdDraft(getGistId());
+                    setSyncOpen(true);
+                    setMenuOpen(false);
+                  }}
+                  className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-muted"
+                >
+                  <span>Sync</span>
+                  {status.color && (
+                    <span
+                      className={`h-2 w-2 rounded-full ${status.color}`}
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+                {syncStatus !== "disabled" && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      void runSync();
+                    }}
+                    disabled={syncStatus === "loading" || syncStatus === "syncing"}
+                    className="block w-full px-4 py-2.5 text-left text-xs text-muted-foreground hover:bg-muted disabled:opacity-40"
+                  >
+                    {syncStatus === "syncing" || syncStatus === "loading"
+                      ? "Syncing…"
+                      : "Sync now"}
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -204,7 +340,7 @@ function RememberPage() {
       <button
         type="button"
         onClick={advance}
-        disabled={items.length === 0}
+        disabled={activeCount === 0}
         aria-label="Next wisdom"
         className="flex flex-1 cursor-pointer items-center justify-center px-6 py-12 text-center focus:outline-none disabled:cursor-default sm:px-12"
       >
@@ -218,6 +354,12 @@ function RememberPage() {
           </p>
         )}
       </button>
+
+      {syncStatus === "error" && syncError && (
+        <div className="border-t border-red-500/40 bg-red-500/10 px-5 py-2 text-center text-xs text-red-600 dark:text-red-400">
+          {syncError}
+        </div>
+      )}
 
       {addOpen && (
         <div
@@ -259,6 +401,80 @@ function RememberPage() {
               >
                 Add
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {syncOpen && (
+        <div
+          className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setSyncOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-medium">Sync via GitHub Gist</h2>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Paste a{" "}
+              <a
+                href="https://github.com/settings/tokens/new?scopes=gist&description=Remember"
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                personal access token
+              </a>{" "}
+              with the <code className="font-mono">gist</code> scope. Your
+              collection is merged with the remote by most-recent change per
+              item.
+            </p>
+            <label className="mt-4 block text-xs font-medium text-muted-foreground">
+              GitHub token
+            </label>
+            <input
+              type="password"
+              value={tokenDraft}
+              onChange={(e) => setTokenDraft(e.target.value)}
+              placeholder="ghp_…"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <label className="mt-3 block text-xs font-medium text-muted-foreground">
+              Gist ID <span className="opacity-60">(optional — auto-discovered)</span>
+            </label>
+            <input
+              type="text"
+              value={gistIdDraft}
+              onChange={(e) => setGistIdDraft(e.target.value)}
+              placeholder="e.g. 3a7f…"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={handleClearSync}
+                className="rounded-md px-3 py-2 text-xs text-muted-foreground hover:bg-muted"
+              >
+                Clear
+              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSyncOpen(false)}
+                  className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveSync}
+                  disabled={!tokenDraft.trim()}
+                  className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+                >
+                  Save & sync
+                </button>
+              </div>
             </div>
           </div>
         </div>
