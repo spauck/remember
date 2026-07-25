@@ -27,7 +27,7 @@ export default defineConfig({
   ...(isGhPages ? { nitro: false as const } : {}),
   tanstackStart: {
     prerender: {
-      enabled: true,
+      enabled: isGhPages,
       crawlLinks: true,
       failOnError: true,
     },
