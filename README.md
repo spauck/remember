@@ -21,9 +21,33 @@ npm i
 npm run dev
 ```
 
+## Base path for subpath hosting
+
+If this app is hosted under a subpath (for example `/my-app/`), set `BASE_URL`.
+
+```sh
+BASE_URL=/my-app/ npm run build
+```
+
+This value is used for both Vite asset URLs and TanStack Router's `basepath`.
+
 ## Built with
 
 - TanStack Start
 - TypeScript
 - React
 - Tailwind CSS
+
+## Deploy to GitHub Pages (via GitHub Actions)
+
+This repository includes a workflow at `.github/workflows/deploy-pages.yml` that builds and deploys the app to GitHub Pages on every push to `dev`, and supports manual runs from the Actions tab.
+
+1. Push this repository to GitHub.
+2. In GitHub, open **Settings → Pages**.
+3. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+4. Push to the `main` branch (or run the workflow manually) to publish.
+
+Notes:
+- The workflow runs `npm ci` and `npm run build`, then deploys `dist/client`.
+- For SPA fallback on GitHub Pages, `dist/client/index.html` is copied to `dist/client/404.html`.
+- `vite.config.ts` is configured to automatically use the correct base path for GitHub Pages project sites.

@@ -1,16 +1,17 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import {
-  Outlet,
-  Link,
   createRootRouteWithContext,
-  useRouter,
   HeadContent,
+  Link,
+  Outlet,
   Scripts,
-} from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+  useRouter,
+} from "@tanstack/react-router"
+import { type ReactNode, useEffect } from "react"
+import { reportLovableError } from "../lib/lovable-error-reporting"
+import appCss from "../styles.css?url"
 
-import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
+const faviconHref = `${import.meta.env.BASE_URL}favicon.ico`
 
 function NotFoundComponent() {
   return (
@@ -31,15 +32,15 @@ function NotFoundComponent() {
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
-  const router = useRouter();
+  console.error(error)
+  const router = useRouter()
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
+    reportLovableError(error, { boundary: "tanstack_root_error_component" })
+  }, [error])
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -52,16 +53,17 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
+            type="button"
             onClick={() => {
-              router.invalidate();
-              reset();
+              router.invalidate()
+              reset()
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Try again
           </button>
           <a
-            href="/"
+            href={import.meta.env.BASE_URL}
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
           >
             Go home
@@ -69,7 +71,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -91,14 +93,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: faviconHref, type: "image/x-icon" },
     ],
   }),
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
-});
+})
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
@@ -111,16 +113,16 @@ function RootShell({ children }: { children: ReactNode }) {
         <Scripts />
       </body>
     </html>
-  );
+  )
 }
 
 function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
+  const { queryClient } = Route.useRouteContext()
 
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
     </QueryClientProvider>
-  );
+  )
 }
