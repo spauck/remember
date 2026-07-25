@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Menu, Plus, Trash2, RefreshCw, Cloud, X } from "lucide-react";
 import {
   activeEntries,
   DEFAULT_WISDOM,
@@ -237,30 +238,25 @@ function RememberPage() {
         <div className="relative">
           <button
             type="button"
-            aria-label={`Open menu (${status.label})`}
+            aria-label={`${menuOpen ? "Close" : "Open"} menu (${status.label})`}
             title={status.label}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((o) => !o)}
-            className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-foreground/80 transition hover:bg-muted hover:text-foreground"
+            className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-card text-foreground/80 shadow-md shadow-black/5 transition-all duration-200 hover:scale-105 hover:text-foreground hover:shadow-lg active:scale-95"
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+            <span
+              className={`transition-all duration-200 ${menuOpen ? "rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100"}`}
             >
-              <line x1="4" y1="7" x2="20" y2="7" />
-              <line x1="4" y1="12" x2="20" y2="12" />
-              <line x1="4" y1="17" x2="20" y2="17" />
-            </svg>
-            {status.color && (
+              <Menu size={20} strokeWidth={2} />
+            </span>
+            <span
+              className={`absolute transition-all duration-200 ${menuOpen ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-0 opacity-0"}`}
+            >
+              <X size={20} strokeWidth={2} />
+            </span>
+            {status.color && !menuOpen && (
               <span
-                className={`absolute right-1 top-1 h-2 w-2 rounded-full ring-2 ring-background ${status.color}`}
+                className={`absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-card ${status.color}`}
                 aria-hidden="true"
               />
             )}
@@ -274,68 +270,104 @@ function RememberPage() {
               />
               <div
                 role="menu"
-                className="absolute right-0 z-20 mt-2 w-52 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-lg"
+                className="absolute right-0 z-20 mt-3 flex flex-col items-end gap-2.5"
               >
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setAddOpen(true);
-                    setMenuOpen(false);
-                  }}
-                  className="block w-full px-4 py-2.5 text-left text-sm hover:bg-muted"
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={handleRemove}
-                  disabled={current === undefined}
-                  className="block w-full px-4 py-2.5 text-left text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Remove
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setTokenDraft(getGistToken());
-                    setGistIdDraft(getGistId());
-                    setSyncOpen(true);
-                    setMenuOpen(false);
-                  }}
-                  className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm hover:bg-muted"
-                >
-                  <span>Sync</span>
-                  {status.color && (
-                    <span
-                      className={`h-2 w-2 rounded-full ${status.color}`}
-                      aria-hidden="true"
-                    />
-                  )}
-                </button>
-                {syncStatus !== "disabled" && (
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
+                {[
+                  {
+                    key: "add",
+                    label: "Add",
+                    icon: <Plus size={18} strokeWidth={2.2} />,
+                    onClick: () => {
+                      setAddOpen(true);
                       setMenuOpen(false);
-                      void runSync();
+                    },
+                    disabled: false,
+                    accent: false,
+                  },
+                  {
+                    key: "remove",
+                    label: "Remove",
+                    icon: <Trash2 size={18} strokeWidth={2} />,
+                    onClick: handleRemove,
+                    disabled: current === undefined,
+                    accent: false,
+                  },
+                  {
+                    key: "sync",
+                    label: "Sync",
+                    icon: <Cloud size={18} strokeWidth={2} />,
+                    onClick: () => {
+                      setTokenDraft(getGistToken());
+                      setGistIdDraft(getGistId());
+                      setSyncOpen(true);
+                      setMenuOpen(false);
+                    },
+                    disabled: false,
+                    dot: status.color,
+                  },
+                  ...(syncStatus !== "disabled"
+                    ? [
+                        {
+                          key: "syncnow",
+                          label:
+                            syncStatus === "syncing" || syncStatus === "loading"
+                              ? "Syncing…"
+                              : "Sync now",
+                          icon: (
+                            <RefreshCw
+                              size={18}
+                              strokeWidth={2}
+                              className={
+                                syncStatus === "syncing" || syncStatus === "loading"
+                                  ? "animate-spin"
+                                  : ""
+                              }
+                            />
+                          ),
+                          onClick: () => {
+                            setMenuOpen(false);
+                            void runSync();
+                          },
+                          disabled:
+                            syncStatus === "loading" || syncStatus === "syncing",
+                        },
+                      ]
+                    : []),
+                ].map((item, i) => (
+                  <div
+                    key={item.key}
+                    className="flex items-center gap-2.5 opacity-0"
+                    style={{
+                      animation: `menu-item-in 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards`,
+                      animationDelay: `${i * 55}ms`,
                     }}
-                    disabled={syncStatus === "loading" || syncStatus === "syncing"}
-                    className="block w-full px-4 py-2.5 text-left text-xs text-muted-foreground hover:bg-muted disabled:opacity-40"
                   >
-                    {syncStatus === "syncing" || syncStatus === "loading"
-                      ? "Syncing…"
-                      : "Sync now"}
-                  </button>
-                )}
+                    <span className="rounded-full bg-card/90 px-2.5 py-1 text-xs font-medium text-foreground/80 shadow-sm shadow-black/5 backdrop-blur">
+                      {item.label}
+                    </span>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={item.onClick}
+                      disabled={item.disabled}
+                      className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-card text-foreground/80 shadow-md shadow-black/5 transition-all duration-200 hover:scale-110 hover:text-foreground hover:shadow-lg active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
+                    >
+                      {item.icon}
+                      {"dot" in item && item.dot && (
+                        <span
+                          className={`absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-card ${item.dot}`}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </button>
+                  </div>
+                ))}
               </div>
             </>
           )}
         </div>
       </header>
+
 
       <button
         type="button"
