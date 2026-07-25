@@ -15,6 +15,8 @@ function normalizeViteBasePath(basePath: string | undefined): string {
 
 const base = normalizeViteBasePath(process.env.BASE_URL)
 
+const isGhPages = process.env.DEPLOY_TARGET === "gh-pages"
+
 export default defineConfig({
   vite: {
     base,
@@ -26,7 +28,8 @@ export default defineConfig({
       failOnError: true,
     },
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
-    server: { entry: "server" },
+    // nitro/vite builds from this. Skip for static GitHub Pages builds so prerender can
+    // load the default server entry.
+    ...(isGhPages ? {} : { server: { entry: "server" } }),
   },
 })
