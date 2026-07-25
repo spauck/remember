@@ -48,5 +48,6 @@ This repository includes a workflow at `.github/workflows/deploy-pages.yml` that
 4. Push to the `main` branch (or run the workflow manually) to publish.
 
 Notes:
-- The workflow runs `npm ci` and `npm run build`, then deploys the Vite `dist` directory.
+- The workflow runs `npm ci` and `npm run build`, then deploys `dist/client`.
+- For SPA fallback on GitHub Pages, `dist/client/index.html` is copied to `dist/client/404.html`.
 - `vite.config.ts` is configured to automatically use the correct base path for GitHub Pages project sites.
