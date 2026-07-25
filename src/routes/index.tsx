@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Menu, Plus, Trash2, RefreshCw, Cloud, X } from "lucide-react";
 import {
   activeEntries,
   DEFAULT_WISDOM,
