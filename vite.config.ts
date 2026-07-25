@@ -21,6 +21,10 @@ export default defineConfig({
   vite: {
     base,
   },
+  // Disable nitro/cloudflare packaging for the GitHub Pages static build so
+  // TanStack Start's default build+prerender pipeline emits static HTML into
+  // dist/client.
+  ...(isGhPages ? { nitro: false as const } : {}),
   tanstackStart: {
     prerender: {
       enabled: true,
@@ -28,8 +32,7 @@ export default defineConfig({
       failOnError: true,
     },
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this. Skip for static GitHub Pages builds so prerender can
-    // load the default server entry.
+    // Skip for static GitHub Pages builds so the default entry is used.
     ...(isGhPages ? {} : { server: { entry: "server" } }),
   },
 })
