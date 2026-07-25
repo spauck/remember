@@ -349,7 +349,7 @@ function RememberPage() {
             Your collection is empty. Open the menu to add a piece of wisdom.
           </p>
         ) : (
-          <p className="max-w-3xl text-balance text-3xl font-light leading-snug tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
+          <p className="max-w-3xl text-balance text-3xl font-medium leading-snug tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
             {wisdomText}
           </p>
         )}
