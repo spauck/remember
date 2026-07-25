@@ -21,6 +21,16 @@ npm i
 npm run dev
 ```
 
+## Base path for subpath hosting
+
+If this app is hosted under a subpath (for example `/my-app/`), set `BASE_URL`.
+
+```sh
+BASE_URL=/my-app/ npm run build
+```
+
+This value is used for both Vite asset URLs and TanStack Router's `basepath`.
+
 ## Built with
 
 - TanStack Start
