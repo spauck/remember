@@ -37,6 +37,7 @@ jobs:
         run: npm run build
         env:
           DEPLOY_TARGET: gh-pages
+          BASE_URL: /remember/
 
       - name: Add Pages support files
         run: |
