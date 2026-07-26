@@ -134,6 +134,15 @@ function RememberPage() {
   const currentEntry = currentKey ? items[currentKey] : undefined;
   const current = currentEntry && currentEntry.op === "add" ? currentEntry.text : undefined;
 
+  const closeMenu = useCallback(() => {
+    if (!menuOpen || menuClosing) return;
+    setMenuClosing(true);
+    setTimeout(() => {
+      setMenuOpen(false);
+      setMenuClosing(false);
+    }, 260);
+  }, [menuOpen, menuClosing]);
+
   const advance = useCallback(() => {
     const active = activeEntries(items).map(([k]) => k);
     if (active.length === 0) return;
