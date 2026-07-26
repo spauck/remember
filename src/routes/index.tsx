@@ -58,6 +58,7 @@ function RememberPage() {
   const [cursor, setCursor] = useState(0);
   const [hydrated, setHydrated] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuClosing, setMenuClosing] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const [draft, setDraft] = useState("");
