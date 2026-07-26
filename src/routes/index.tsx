@@ -309,7 +309,7 @@ function RememberPage() {
                     icon: <Plus size={18} strokeWidth={2.2} />,
                     onClick: () => {
                       setAddOpen(true);
-                      setMenuOpen(false);
+                      closeMenu();
                     },
                     disabled: false,
                     accent: false,
