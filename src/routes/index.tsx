@@ -56,8 +56,11 @@ function RememberPage() {
   const [items, setItems] = useState<WisdomMap>({});
   const [order, setOrder] = useState<string[]>([]);
   const [cursor, setCursor] = useState(0);
+  const [displayedText, setDisplayedText] = useState<string | undefined>(undefined);
+  const [wisdomAnim, setWisdomAnim] = useState<"idle" | "out" | "in">("idle");
   const [hydrated, setHydrated] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuClosing, setMenuClosing] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -68,6 +71,10 @@ function RememberPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const itemsRef = useRef<WisdomMap>({});
   itemsRef.current = items;
+
+  const currentKey = order[cursor];
+  const currentEntry = currentKey ? items[currentKey] : undefined;
+  const current = currentEntry && currentEntry.op === "add" ? currentEntry.text : undefined;
 
   const buildOrder = useCallback((map: WisdomMap) => {
     const keys = activeEntries(map).map(([k]) => k);
@@ -94,6 +101,23 @@ function RememberPage() {
   useEffect(() => {
     if (hydrated) storage.save(items);
   }, [items, hydrated]);
+
+  // Gentle fade transition between wisdom items
+  useEffect(() => {
+    if (current === displayedText) return;
+    if (displayedText === undefined && current !== undefined) {
+      setDisplayedText(current);
+      return;
+    }
+    setWisdomAnim("out");
+    const t = setTimeout(() => {
+      setDisplayedText(current);
+      setWisdomAnim("in");
+      const t2 = setTimeout(() => setWisdomAnim("idle"), 280);
+      return () => clearTimeout(t2);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [current, displayedText]);
 
   const runSync = useCallback(
     async (phase: "loading" | "syncing" = "syncing") => {
@@ -127,9 +151,15 @@ function RememberPage() {
     if (hydrated && getGistToken()) runSync("loading");
   }, [hydrated, runSync]);
 
-  const currentKey = order[cursor];
-  const currentEntry = currentKey ? items[currentKey] : undefined;
-  const current = currentEntry && currentEntry.op === "add" ? currentEntry.text : undefined;
+
+  const closeMenu = useCallback(() => {
+    if (!menuOpen || menuClosing) return;
+    setMenuClosing(true);
+    setTimeout(() => {
+      setMenuOpen(false);
+      setMenuClosing(false);
+    }, 260);
+  }, [menuOpen, menuClosing]);
 
   const advance = useCallback(() => {
     const active = activeEntries(items).map(([k]) => k);
@@ -217,7 +247,7 @@ function RememberPage() {
 
   const activeCount = useMemo(() => activeEntries(items).length, [items]);
   const showEmpty = hydrated && activeCount === 0;
-  const wisdomText = current ?? "";
+  const wisdomText = displayedText ?? "";
 
   const statusInfo: Record<SyncStatus, { color: string; label: string }> = {
     disabled: { color: "", label: "Sync not configured" },
@@ -229,6 +259,69 @@ function RememberPage() {
   };
   const status = statusInfo[syncStatus];
 
+  const menuItems = [
+    {
+      key: "add",
+      label: "Add",
+      icon: <Plus size={18} strokeWidth={2.2} />,
+      onClick: () => {
+        setAddOpen(true);
+        closeMenu();
+      },
+      disabled: false,
+      accent: false,
+    },
+    {
+      key: "remove",
+      label: "Remove",
+      icon: <Trash2 size={18} strokeWidth={2} />,
+      onClick: handleRemove,
+      disabled: current === undefined,
+      accent: false,
+    },
+    {
+      key: "sync",
+      label: "Sync",
+      icon: <Cloud size={18} strokeWidth={2} />,
+      onClick: () => {
+        setTokenDraft(getGistToken());
+        setGistIdDraft(getGistId());
+        setSyncOpen(true);
+        closeMenu();
+      },
+      disabled: false,
+      dot: status.color,
+    },
+    ...(syncStatus !== "disabled"
+      ? [
+          {
+            key: "syncnow",
+            label:
+              syncStatus === "syncing" || syncStatus === "loading"
+                ? "Syncing…"
+                : "Sync now",
+            icon: (
+              <RefreshCw
+                size={18}
+                strokeWidth={2}
+                className={
+                  syncStatus === "syncing" || syncStatus === "loading"
+                    ? "animate-spin"
+                    : ""
+                }
+              />
+            ),
+            onClick: () => {
+              closeMenu();
+              void runSync();
+            },
+            disabled:
+              syncStatus === "loading" || syncStatus === "syncing",
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="flex items-center justify-between border-b border-border/60 px-5 py-4 sm:px-8">
@@ -238,11 +331,11 @@ function RememberPage() {
         <div className="relative">
           <button
             type="button"
-            aria-label={`${menuOpen ? "Close" : "Open"} menu (${status.label})`}
+            aria-label={`${menuOpen && !menuClosing ? "Close" : "Open"} menu (${status.label})`}
             title={status.label}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((o) => !o)}
-            className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-card text-foreground/80 shadow-md shadow-black/5 transition-all duration-200 hover:scale-105 hover:text-foreground hover:shadow-lg active:scale-95"
+            aria-expanded={menuOpen && !menuClosing}
+            onClick={() => (menuOpen ? closeMenu() : setMenuOpen(true))}
+            className="relative z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-card text-foreground/80 shadow-md shadow-black/5 transition-all duration-200 hover:scale-105 hover:text-foreground hover:shadow-lg active:scale-95"
           >
             <span
               className={`transition-all duration-200 ${menuOpen ? "rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100"}`}
@@ -261,85 +354,28 @@ function RememberPage() {
               />
             )}
           </button>
-          {menuOpen && (
+          {(menuOpen || menuClosing) && (
             <>
               <div
                 className="fixed inset-0 z-10"
-                onClick={() => setMenuOpen(false)}
+                onClick={closeMenu}
                 aria-hidden="true"
               />
               <div
                 role="menu"
                 className="absolute right-0 z-20 mt-3 flex flex-col items-end gap-2.5"
               >
-                {[
-                  {
-                    key: "add",
-                    label: "Add",
-                    icon: <Plus size={18} strokeWidth={2.2} />,
-                    onClick: () => {
-                      setAddOpen(true);
-                      setMenuOpen(false);
-                    },
-                    disabled: false,
-                    accent: false,
-                  },
-                  {
-                    key: "remove",
-                    label: "Remove",
-                    icon: <Trash2 size={18} strokeWidth={2} />,
-                    onClick: handleRemove,
-                    disabled: current === undefined,
-                    accent: false,
-                  },
-                  {
-                    key: "sync",
-                    label: "Sync",
-                    icon: <Cloud size={18} strokeWidth={2} />,
-                    onClick: () => {
-                      setTokenDraft(getGistToken());
-                      setGistIdDraft(getGistId());
-                      setSyncOpen(true);
-                      setMenuOpen(false);
-                    },
-                    disabled: false,
-                    dot: status.color,
-                  },
-                  ...(syncStatus !== "disabled"
-                    ? [
-                        {
-                          key: "syncnow",
-                          label:
-                            syncStatus === "syncing" || syncStatus === "loading"
-                              ? "Syncing…"
-                              : "Sync now",
-                          icon: (
-                            <RefreshCw
-                              size={18}
-                              strokeWidth={2}
-                              className={
-                                syncStatus === "syncing" || syncStatus === "loading"
-                                  ? "animate-spin"
-                                  : ""
-                              }
-                            />
-                          ),
-                          onClick: () => {
-                            setMenuOpen(false);
-                            void runSync();
-                          },
-                          disabled:
-                            syncStatus === "loading" || syncStatus === "syncing",
-                        },
-                      ]
-                    : []),
-                ].map((item, i) => (
+                {menuItems.map((item, i) => (
                   <div
                     key={item.key}
-                    className="flex items-center gap-2.5 opacity-0"
+                    className={`flex items-center gap-2.5 ${menuClosing ? "" : "opacity-0"}`}
                     style={{
-                      animation: `menu-item-in 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards`,
-                      animationDelay: `${i * 55}ms`,
+                      animation: menuClosing
+                        ? `menu-item-out 220ms cubic-bezier(0.22, 1, 0.36, 1) forwards`
+                        : `menu-item-in 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards`,
+                      animationDelay: menuClosing
+                        ? `${(menuItems.length - 1 - i) * 45}ms`
+                        : `${i * 55}ms`,
                     }}
                   >
                     <span className="rounded-full bg-card/90 px-2.5 py-1 text-xs font-medium text-foreground/80 shadow-sm shadow-black/5 backdrop-blur">
@@ -381,7 +417,16 @@ function RememberPage() {
             Your collection is empty. Open the menu to add a piece of wisdom.
           </p>
         ) : (
-          <p className="max-w-3xl text-balance text-3xl font-medium leading-snug tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
+          <p
+            key={wisdomAnim === "idle" ? currentKey : `anim-${wisdomAnim}`}
+            className={`max-w-3xl text-balance text-3xl font-medium leading-snug tracking-tight sm:text-4xl md:text-5xl lg:text-6xl ${
+              wisdomAnim === "out"
+                ? "animate-[wisdom-fade-out_200ms_ease-out_forwards]"
+                : wisdomAnim === "in"
+                  ? "animate-[wisdom-fade-in_280ms_ease-out_forwards]"
+                  : ""
+            }`}
+          >
             {wisdomText}
           </p>
         )}
