@@ -335,7 +335,7 @@ function RememberPage() {
             title={status.label}
             aria-expanded={menuOpen && !menuClosing}
             onClick={() => (menuOpen ? closeMenu() : setMenuOpen(true))}
-            className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-card text-foreground/80 shadow-md shadow-black/5 transition-all duration-200 hover:scale-105 hover:text-foreground hover:shadow-lg active:scale-95"
+            className="relative z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-card text-foreground/80 shadow-md shadow-black/5 transition-all duration-200 hover:scale-105 hover:text-foreground hover:shadow-lg active:scale-95"
           >
             <span
               className={`transition-all duration-200 ${menuOpen ? "rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100"}`}
