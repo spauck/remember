@@ -247,7 +247,7 @@ function RememberPage() {
 
   const activeCount = useMemo(() => activeEntries(items).length, [items]);
   const showEmpty = hydrated && activeCount === 0;
-  const wisdomText = current ?? "";
+  const wisdomText = displayedText ?? "";
 
   const statusInfo: Record<SyncStatus, { color: string; label: string }> = {
     disabled: { color: "", label: "Sync not configured" },
