@@ -207,6 +207,7 @@ function RememberPage() {
     };
     const newOrder = order.filter((k) => k !== currentKey);
     setItems(newItems);
+    itemsRef.current = newItems;
     if (newOrder.length === 0) {
       setOrder([]);
       setCursor(0);
@@ -217,7 +218,7 @@ function RememberPage() {
       setOrder(newOrder);
     }
     setMenuOpen(false);
-    if (getGistToken()) void runSync();
+    if (getGistToken()) void runSync("syncing", newItems);
   };
 
   const handleSaveSync = async () => {
