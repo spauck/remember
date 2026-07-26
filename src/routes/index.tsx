@@ -56,6 +56,8 @@ function RememberPage() {
   const [items, setItems] = useState<WisdomMap>({});
   const [order, setOrder] = useState<string[]>([]);
   const [cursor, setCursor] = useState(0);
+  const [displayedText, setDisplayedText] = useState<string | undefined>(undefined);
+  const [wisdomAnim, setWisdomAnim] = useState<"idle" | "out" | "in">("idle");
   const [hydrated, setHydrated] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuClosing, setMenuClosing] = useState(false);
