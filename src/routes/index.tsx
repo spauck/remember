@@ -368,10 +368,14 @@ function RememberPage() {
                 {menuItems.map((item, i) => (
                   <div
                     key={item.key}
-                    className="flex items-center gap-2.5 opacity-0"
+                    className={`flex items-center gap-2.5 ${menuClosing ? "" : "opacity-0"}`}
                     style={{
-                      animation: `menu-item-in 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards`,
-                      animationDelay: `${i * 55}ms`,
+                      animation: menuClosing
+                        ? `menu-item-out 220ms cubic-bezier(0.22, 1, 0.36, 1) forwards`
+                        : `menu-item-in 260ms cubic-bezier(0.22, 1, 0.36, 1) forwards`,
+                      animationDelay: menuClosing
+                        ? `${(menuItems.length - 1 - i) * 45}ms`
+                        : `${i * 55}ms`,
                     }}
                   >
                     <span className="rounded-full bg-card/90 px-2.5 py-1 text-xs font-medium text-foreground/80 shadow-sm shadow-black/5 backdrop-blur">
