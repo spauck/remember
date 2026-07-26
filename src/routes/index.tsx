@@ -105,33 +105,35 @@ function RememberPage() {
     if (hydrated) storage.save(items);
   }, [items, hydrated]);
 
-  // Gentle fade transition between wisdom items
+  // Gentle fade transition between wisdom items (opacity only)
   useEffect(() => {
     if (current === displayedText) return;
     if (displayedText === undefined && current !== undefined) {
       setDisplayedText(current);
       return;
     }
+    // Already fading out — the pending commit will pick up the latest value.
+    if (fadeTimer.current) return;
     setWisdomAnim("out");
-    const t = setTimeout(() => {
-      setDisplayedText(current);
+    fadeTimer.current = setTimeout(() => {
+      fadeTimer.current = null;
+      setDisplayedText(currentRef.current);
       setWisdomAnim("in");
-      const t2 = setTimeout(() => setWisdomAnim("idle"), 280);
-      return () => clearTimeout(t2);
+      setTimeout(() => setWisdomAnim("idle"), 280);
     }, 200);
-    return () => clearTimeout(t);
   }, [current, displayedText]);
 
   const runSync = useCallback(
-    async (phase: "loading" | "syncing" = "syncing") => {
+    async (phase: "loading" | "syncing" = "syncing", base?: WisdomMap) => {
       if (!getGistToken()) return;
+      const local = base ?? itemsRef.current;
       setSyncStatus(phase);
       setSyncError(null);
       try {
-        const result = await syncWithGist(itemsRef.current);
+        const result = await syncWithGist(local);
         const merged = result.merged;
         // Only reset order if the active set changed.
-        const prevKeys = new Set(activeEntries(itemsRef.current).map(([k]) => k));
+        const prevKeys = new Set(activeEntries(local).map(([k]) => k));
         const nextKeys = new Set(activeEntries(merged).map(([k]) => k));
         let sameActive = prevKeys.size === nextKeys.size;
         if (sameActive) for (const k of prevKeys) if (!nextKeys.has(k)) { sameActive = false; break; }
