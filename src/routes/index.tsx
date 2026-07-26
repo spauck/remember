@@ -71,10 +71,13 @@ function RememberPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const itemsRef = useRef<WisdomMap>({});
   itemsRef.current = items;
+  const fadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentKey = order[cursor];
   const currentEntry = currentKey ? items[currentKey] : undefined;
   const current = currentEntry && currentEntry.op === "add" ? currentEntry.text : undefined;
+  const currentRef = useRef<string | undefined>(undefined);
+  currentRef.current = current;
 
   const buildOrder = useCallback((map: WisdomMap) => {
     const keys = activeEntries(map).map(([k]) => k);
