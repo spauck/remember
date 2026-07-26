@@ -291,11 +291,11 @@ function RememberPage() {
               />
             )}
           </button>
-          {menuOpen && (
+          {(menuOpen || menuClosing) && (
             <>
               <div
                 className="fixed inset-0 z-10"
-                onClick={() => setMenuOpen(false)}
+                onClick={closeMenu}
                 aria-hidden="true"
               />
               <div
