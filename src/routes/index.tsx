@@ -98,6 +98,23 @@ function RememberPage() {
     if (hydrated) storage.save(items);
   }, [items, hydrated]);
 
+  // Gentle fade transition between wisdom items
+  useEffect(() => {
+    if (current === displayedText) return;
+    if (displayedText === undefined && current !== undefined) {
+      setDisplayedText(current);
+      return;
+    }
+    setWisdomAnim("out");
+    const t = setTimeout(() => {
+      setDisplayedText(current);
+      setWisdomAnim("in");
+      const t2 = setTimeout(() => setWisdomAnim("idle"), 280);
+      return () => clearTimeout(t2);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [current, displayedText]);
+
   const runSync = useCallback(
     async (phase: "loading" | "syncing" = "syncing") => {
       if (!getGistToken()) return;
