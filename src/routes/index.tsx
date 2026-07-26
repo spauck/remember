@@ -330,7 +330,7 @@ function RememberPage() {
                       setTokenDraft(getGistToken());
                       setGistIdDraft(getGistId());
                       setSyncOpen(true);
-                      setMenuOpen(false);
+                      closeMenu();
                     },
                     disabled: false,
                     dot: status.color,
