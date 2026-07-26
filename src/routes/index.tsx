@@ -365,68 +365,7 @@ function RememberPage() {
                 role="menu"
                 className="absolute right-0 z-20 mt-3 flex flex-col items-end gap-2.5"
               >
-                {[
-                  {
-                    key: "add",
-                    label: "Add",
-                    icon: <Plus size={18} strokeWidth={2.2} />,
-                    onClick: () => {
-                      setAddOpen(true);
-                      closeMenu();
-                    },
-                    disabled: false,
-                    accent: false,
-                  },
-                  {
-                    key: "remove",
-                    label: "Remove",
-                    icon: <Trash2 size={18} strokeWidth={2} />,
-                    onClick: handleRemove,
-                    disabled: current === undefined,
-                    accent: false,
-                  },
-                  {
-                    key: "sync",
-                    label: "Sync",
-                    icon: <Cloud size={18} strokeWidth={2} />,
-                    onClick: () => {
-                      setTokenDraft(getGistToken());
-                      setGistIdDraft(getGistId());
-                      setSyncOpen(true);
-                      closeMenu();
-                    },
-                    disabled: false,
-                    dot: status.color,
-                  },
-                  ...(syncStatus !== "disabled"
-                    ? [
-                        {
-                          key: "syncnow",
-                          label:
-                            syncStatus === "syncing" || syncStatus === "loading"
-                              ? "Syncing…"
-                              : "Sync now",
-                          icon: (
-                            <RefreshCw
-                              size={18}
-                              strokeWidth={2}
-                              className={
-                                syncStatus === "syncing" || syncStatus === "loading"
-                                  ? "animate-spin"
-                                  : ""
-                              }
-                            />
-                          ),
-                          onClick: () => {
-                            closeMenu();
-                            void runSync();
-                          },
-                          disabled:
-                            syncStatus === "loading" || syncStatus === "syncing",
-                        },
-                      ]
-                    : []),
-                ].map((item, i) => (
+                {menuItems.map((item, i) => (
                   <div
                     key={item.key}
                     className="flex items-center gap-2.5 opacity-0"
