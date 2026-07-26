@@ -355,7 +355,7 @@ function RememberPage() {
                             />
                           ),
                           onClick: () => {
-                            setMenuOpen(false);
+                            closeMenu();
                             void runSync();
                           },
                           disabled:
