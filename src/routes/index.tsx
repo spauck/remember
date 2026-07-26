@@ -259,6 +259,69 @@ function RememberPage() {
   };
   const status = statusInfo[syncStatus];
 
+  const menuItems = [
+    {
+      key: "add",
+      label: "Add",
+      icon: <Plus size={18} strokeWidth={2.2} />,
+      onClick: () => {
+        setAddOpen(true);
+        closeMenu();
+      },
+      disabled: false,
+      accent: false,
+    },
+    {
+      key: "remove",
+      label: "Remove",
+      icon: <Trash2 size={18} strokeWidth={2} />,
+      onClick: handleRemove,
+      disabled: current === undefined,
+      accent: false,
+    },
+    {
+      key: "sync",
+      label: "Sync",
+      icon: <Cloud size={18} strokeWidth={2} />,
+      onClick: () => {
+        setTokenDraft(getGistToken());
+        setGistIdDraft(getGistId());
+        setSyncOpen(true);
+        closeMenu();
+      },
+      disabled: false,
+      dot: status.color,
+    },
+    ...(syncStatus !== "disabled"
+      ? [
+          {
+            key: "syncnow",
+            label:
+              syncStatus === "syncing" || syncStatus === "loading"
+                ? "Syncing…"
+                : "Sync now",
+            icon: (
+              <RefreshCw
+                size={18}
+                strokeWidth={2}
+                className={
+                  syncStatus === "syncing" || syncStatus === "loading"
+                    ? "animate-spin"
+                    : ""
+                }
+              />
+            ),
+            onClick: () => {
+              closeMenu();
+              void runSync();
+            },
+            disabled:
+              syncStatus === "loading" || syncStatus === "syncing",
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="flex items-center justify-between border-b border-border/60 px-5 py-4 sm:px-8">
