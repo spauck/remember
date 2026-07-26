@@ -268,10 +268,10 @@ function RememberPage() {
         <div className="relative">
           <button
             type="button"
-            aria-label={`${menuOpen ? "Close" : "Open"} menu (${status.label})`}
+            aria-label={`${menuOpen && !menuClosing ? "Close" : "Open"} menu (${status.label})`}
             title={status.label}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((o) => !o)}
+            aria-expanded={menuOpen && !menuClosing}
+            onClick={() => (menuOpen ? closeMenu() : setMenuOpen(true))}
             className="relative inline-flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-card text-foreground/80 shadow-md shadow-black/5 transition-all duration-200 hover:scale-105 hover:text-foreground hover:shadow-lg active:scale-95"
           >
             <span
