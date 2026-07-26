@@ -417,7 +417,16 @@ function RememberPage() {
             Your collection is empty. Open the menu to add a piece of wisdom.
           </p>
         ) : (
-          <p className="max-w-3xl text-balance text-3xl font-medium leading-snug tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
+          <p
+            key={wisdomAnim === "idle" ? currentKey : `anim-${wisdomAnim}`}
+            className={`max-w-3xl text-balance text-3xl font-medium leading-snug tracking-tight sm:text-4xl md:text-5xl lg:text-6xl ${
+              wisdomAnim === "out"
+                ? "animate-[wisdom-fade-out_200ms_ease-out_forwards]"
+                : wisdomAnim === "in"
+                  ? "animate-[wisdom-fade-in_280ms_ease-out_forwards]"
+                  : ""
+            }`}
+          >
             {wisdomText}
           </p>
         )}
