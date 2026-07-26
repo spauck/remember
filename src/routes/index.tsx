@@ -232,9 +232,8 @@ function RememberPage() {
       return;
     }
     // Merge remote in and push
-    const local = storage.load();
-    setItems(local);
-    void runSync("loading");
+    const local = itemsRef.current;
+    void runSync("loading", local);
   };
 
   const handleClearSync = () => {
