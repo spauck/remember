@@ -190,12 +190,13 @@ function RememberPage() {
       [key]: { text, op: "add", updatedAt: Date.now() },
     };
     setItems(newItems);
+    itemsRef.current = newItems;
     const rest = order.slice(cursor + 1);
     setOrder([...order.slice(0, cursor + 1), key, ...rest]);
     setDraft("");
     setAddOpen(false);
     setMenuOpen(false);
-    if (getGistToken()) void runSync();
+    if (getGistToken()) void runSync("syncing", newItems);
   };
 
   const handleRemove = () => {
