@@ -72,6 +72,10 @@ function RememberPage() {
   const itemsRef = useRef<WisdomMap>({});
   itemsRef.current = items;
 
+  const currentKey = order[cursor];
+  const currentEntry = currentKey ? items[currentKey] : undefined;
+  const current = currentEntry && currentEntry.op === "add" ? currentEntry.text : undefined;
+
   const buildOrder = useCallback((map: WisdomMap) => {
     const keys = activeEntries(map).map(([k]) => k);
     return shuffle(keys);
