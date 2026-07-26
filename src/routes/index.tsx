@@ -147,9 +147,6 @@ function RememberPage() {
     if (hydrated && getGistToken()) runSync("loading");
   }, [hydrated, runSync]);
 
-  const currentKey = order[cursor];
-  const currentEntry = currentKey ? items[currentKey] : undefined;
-  const current = currentEntry && currentEntry.op === "add" ? currentEntry.text : undefined;
 
   const closeMenu = useCallback(() => {
     if (!menuOpen || menuClosing) return;
