@@ -514,6 +514,30 @@ function RememberPage() {
                 Clear
               </button>
               <div className="flex gap-2">
+                {syncStatus !== "disabled" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSyncOpen(false);
+                      void runSync();
+                    }}
+                    disabled={syncStatus === "loading" || syncStatus === "syncing"}
+                    className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted disabled:opacity-40"
+                  >
+                    <RefreshCw
+                      size={16}
+                      strokeWidth={2}
+                      className={
+                        syncStatus === "loading" || syncStatus === "syncing"
+                          ? "animate-spin"
+                          : ""
+                      }
+                    />
+                    {syncStatus === "loading" || syncStatus === "syncing"
+                      ? "Syncing…"
+                      : "Sync now"}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setSyncOpen(false)}
