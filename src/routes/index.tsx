@@ -296,36 +296,8 @@ function RememberPage() {
         closeMenu();
       },
       disabled: false,
-      dot: status.color,
+      dot: syncStatus === "error" ? undefined : status.color,
     },
-    ...(syncStatus !== "disabled"
-      ? [
-          {
-            key: "syncnow",
-            label:
-              syncStatus === "syncing" || syncStatus === "loading"
-                ? "Syncing…"
-                : "Sync now",
-            icon: (
-              <RefreshCw
-                size={18}
-                strokeWidth={2}
-                className={
-                  syncStatus === "syncing" || syncStatus === "loading"
-                    ? "animate-spin"
-                    : ""
-                }
-              />
-            ),
-            onClick: () => {
-              closeMenu();
-              void runSync();
-            },
-            disabled:
-              syncStatus === "loading" || syncStatus === "syncing",
-          },
-        ]
-      : []),
   ];
 
   return (
@@ -353,7 +325,7 @@ function RememberPage() {
             >
               <X size={20} strokeWidth={2} />
             </span>
-            {status.color && !menuOpen && (
+            {syncStatus === "error" && status.color && !menuOpen && (
               <span
                 className={`absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-card ${status.color}`}
                 aria-hidden="true"
@@ -542,6 +514,30 @@ function RememberPage() {
                 Clear
               </button>
               <div className="flex gap-2">
+                {syncStatus !== "disabled" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSyncOpen(false);
+                      void runSync();
+                    }}
+                    disabled={syncStatus === "loading" || syncStatus === "syncing"}
+                    className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted disabled:opacity-40"
+                  >
+                    <RefreshCw
+                      size={16}
+                      strokeWidth={2}
+                      className={
+                        syncStatus === "loading" || syncStatus === "syncing"
+                          ? "animate-spin"
+                          : ""
+                      }
+                    />
+                    {syncStatus === "loading" || syncStatus === "syncing"
+                      ? "Syncing…"
+                      : "Sync now"}
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setSyncOpen(false)}
