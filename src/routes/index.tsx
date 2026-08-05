@@ -296,36 +296,8 @@ function RememberPage() {
         closeMenu();
       },
       disabled: false,
-      dot: status.color,
+      dot: syncStatus === "error" ? undefined : status.color,
     },
-    ...(syncStatus !== "disabled"
-      ? [
-          {
-            key: "syncnow",
-            label:
-              syncStatus === "syncing" || syncStatus === "loading"
-                ? "Syncing…"
-                : "Sync now",
-            icon: (
-              <RefreshCw
-                size={18}
-                strokeWidth={2}
-                className={
-                  syncStatus === "syncing" || syncStatus === "loading"
-                    ? "animate-spin"
-                    : ""
-                }
-              />
-            ),
-            onClick: () => {
-              closeMenu();
-              void runSync();
-            },
-            disabled:
-              syncStatus === "loading" || syncStatus === "syncing",
-          },
-        ]
-      : []),
   ];
 
   return (
