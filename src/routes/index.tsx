@@ -325,7 +325,7 @@ function RememberPage() {
             >
               <X size={20} strokeWidth={2} />
             </span>
-            {status.color && !menuOpen && (
+            {syncStatus === "error" && status.color && !menuOpen && (
               <span
                 className={`absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-card ${status.color}`}
                 aria-hidden="true"
