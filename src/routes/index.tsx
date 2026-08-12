@@ -114,9 +114,13 @@ function RememberPage() {
 
   // Gentle fade transition between wisdom items (opacity only)
   useEffect(() => {
-    if (current === displayedText) return;
+    if (current === displayedText) {
+      if (currentSource !== displayedSource) setDisplayedSource(currentSource);
+      return;
+    }
     if (displayedText === undefined && current !== undefined) {
       setDisplayedText(current);
+      setDisplayedSource(currentSource);
       return;
     }
     // Already fading out — the pending commit will pick up the latest value.
@@ -125,10 +129,11 @@ function RememberPage() {
     fadeTimer.current = setTimeout(() => {
       fadeTimer.current = null;
       setDisplayedText(currentRef.current);
+      setDisplayedSource(currentSourceRef.current);
       setWisdomAnim("in");
       setTimeout(() => setWisdomAnim("idle"), 280);
     }, 200);
-  }, [current, displayedText]);
+  }, [current, displayedText, currentSource, displayedSource]);
 
   const runSync = useCallback(
     async (phase: "loading" | "syncing" = "syncing", base?: WisdomMap) => {
