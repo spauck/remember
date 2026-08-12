@@ -466,7 +466,9 @@ function RememberPage() {
             className="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-base font-medium">Add wisdom</h2>
+            <h2 className="text-base font-medium">
+              {editMode ? "Edit wisdom" : "Add wisdom"}
+            </h2>
             <textarea
               ref={textareaRef}
               value={draft}
@@ -478,12 +480,37 @@ function RememberPage() {
                 if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleAdd();
               }}
             />
+            <label className="mt-3 block text-xs font-medium text-muted-foreground">
+              Source <span className="opacity-60">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={sourceDraft}
+              onChange={(e) => setSourceDraft(e.target.value)}
+              placeholder="Who said it, or where it's from"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleAdd();
+              }}
+            />
+            <label className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={editMode}
+                disabled={!currentEntry || current === undefined}
+                onChange={(e) => applyEditMode(e.target.checked)}
+                className="h-4 w-4 rounded border-input accent-primary disabled:opacity-40"
+              />
+              Edit the current item instead
+            </label>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setAddOpen(false);
                   setDraft("");
+                  setSourceDraft("");
+                  setEditMode(false);
                 }}
                 className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
               >
@@ -495,7 +522,7 @@ function RememberPage() {
                 disabled={!draft.trim()}
                 className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
               >
-                Add
+                {editMode ? "Save" : "Add"}
               </button>
             </div>
           </div>
