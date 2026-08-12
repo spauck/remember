@@ -193,19 +193,41 @@ function RememberPage() {
     }
   }, [items, order, cursor]);
 
+  const applyEditMode = (on: boolean) => {
+    setEditMode(on);
+    if (on) {
+      setDraft(currentEntry?.text ?? "");
+      setSourceDraft(currentEntry?.source ?? "");
+    } else {
+      setDraft("");
+      setSourceDraft("");
+    }
+  };
+
   const handleAdd = () => {
     const text = draft.trim();
     if (!text) return;
-    const key = randomKey();
+    const source = sourceDraft.trim();
+    const editing = editMode && currentKey && currentEntry;
+    const key = editing ? currentKey : randomKey();
     const newItems: WisdomMap = {
       ...items,
-      [key]: { text, op: "add", updatedAt: Date.now() },
+      [key]: {
+        text,
+        ...(source ? { source } : {}),
+        op: "add" as const,
+        updatedAt: Date.now(),
+      },
     };
     setItems(newItems);
     itemsRef.current = newItems;
-    const rest = order.slice(cursor + 1);
-    setOrder([...order.slice(0, cursor + 1), key, ...rest]);
+    if (!editing) {
+      const rest = order.slice(cursor + 1);
+      setOrder([...order.slice(0, cursor + 1), key, ...rest]);
+    }
     setDraft("");
+    setSourceDraft("");
+    setEditMode(false);
     setAddOpen(false);
     setMenuOpen(false);
     if (getGistToken()) void runSync("syncing", newItems);
