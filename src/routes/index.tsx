@@ -429,9 +429,9 @@ function RememberPage() {
             Your collection is empty. Open the menu to add a piece of wisdom.
           </p>
         ) : (
-          <p
+          <div
             key={wisdomAnim === "idle" ? currentKey : `anim-${wisdomAnim}`}
-            className={`max-w-3xl text-balance text-3xl font-medium leading-snug tracking-tight sm:text-4xl md:text-5xl lg:text-6xl ${
+            className={`max-w-3xl ${
               wisdomAnim === "out"
                 ? "animate-[wisdom-fade-out_200ms_ease-out_forwards]"
                 : wisdomAnim === "in"
@@ -439,8 +439,15 @@ function RememberPage() {
                   : ""
             }`}
           >
-            {wisdomText}
-          </p>
+            <p className="text-balance text-3xl font-medium leading-snug tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
+              {wisdomText}
+            </p>
+            {displayedSource && (
+              <p className="mt-4 text-right text-base text-muted-foreground sm:text-lg md:text-xl">
+                {displayedSource}
+              </p>
+            )}
+          </div>
         )}
       </button>
 
