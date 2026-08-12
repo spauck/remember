@@ -57,6 +57,7 @@ function RememberPage() {
   const [order, setOrder] = useState<string[]>([]);
   const [cursor, setCursor] = useState(0);
   const [displayedText, setDisplayedText] = useState<string | undefined>(undefined);
+  const [displayedSource, setDisplayedSource] = useState<string | undefined>(undefined);
   const [wisdomAnim, setWisdomAnim] = useState<"idle" | "out" | "in">("idle");
   const [hydrated, setHydrated] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -64,6 +65,8 @@ function RememberPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const [draft, setDraft] = useState("");
+  const [sourceDraft, setSourceDraft] = useState("");
+  const [editMode, setEditMode] = useState(false);
   const [tokenDraft, setTokenDraft] = useState("");
   const [gistIdDraft, setGistIdDraft] = useState("");
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("disabled");
@@ -76,8 +79,12 @@ function RememberPage() {
   const currentKey = order[cursor];
   const currentEntry = currentKey ? items[currentKey] : undefined;
   const current = currentEntry && currentEntry.op === "add" ? currentEntry.text : undefined;
+  const currentSource =
+    currentEntry && currentEntry.op === "add" ? currentEntry.source : undefined;
   const currentRef = useRef<string | undefined>(undefined);
   currentRef.current = current;
+  const currentSourceRef = useRef<string | undefined>(undefined);
+  currentSourceRef.current = currentSource;
 
   const buildOrder = useCallback((map: WisdomMap) => {
     const keys = activeEntries(map).map(([k]) => k);
