@@ -305,6 +305,9 @@ function RememberPage() {
       label: "Add",
       icon: <Plus size={18} strokeWidth={2.2} />,
       onClick: () => {
+        setEditMode(false);
+        setDraft("");
+        setSourceDraft("");
         setAddOpen(true);
         closeMenu();
       },
