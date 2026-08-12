@@ -2,6 +2,7 @@ export type WisdomOp = "add" | "delete";
 
 export interface WisdomEntry {
   text: string;
+  source?: string;
   op: WisdomOp;
   updatedAt: number;
 }

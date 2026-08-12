@@ -57,6 +57,7 @@ function RememberPage() {
   const [order, setOrder] = useState<string[]>([]);
   const [cursor, setCursor] = useState(0);
   const [displayedText, setDisplayedText] = useState<string | undefined>(undefined);
+  const [displayedSource, setDisplayedSource] = useState<string | undefined>(undefined);
   const [wisdomAnim, setWisdomAnim] = useState<"idle" | "out" | "in">("idle");
   const [hydrated, setHydrated] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -64,6 +65,8 @@ function RememberPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
   const [draft, setDraft] = useState("");
+  const [sourceDraft, setSourceDraft] = useState("");
+  const [editMode, setEditMode] = useState(false);
   const [tokenDraft, setTokenDraft] = useState("");
   const [gistIdDraft, setGistIdDraft] = useState("");
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("disabled");
@@ -76,8 +79,12 @@ function RememberPage() {
   const currentKey = order[cursor];
   const currentEntry = currentKey ? items[currentKey] : undefined;
   const current = currentEntry && currentEntry.op === "add" ? currentEntry.text : undefined;
+  const currentSource =
+    currentEntry && currentEntry.op === "add" ? currentEntry.source : undefined;
   const currentRef = useRef<string | undefined>(undefined);
   currentRef.current = current;
+  const currentSourceRef = useRef<string | undefined>(undefined);
+  currentSourceRef.current = currentSource;
 
   const buildOrder = useCallback((map: WisdomMap) => {
     const keys = activeEntries(map).map(([k]) => k);
@@ -107,9 +114,13 @@ function RememberPage() {
 
   // Gentle fade transition between wisdom items (opacity only)
   useEffect(() => {
-    if (current === displayedText) return;
+    if (current === displayedText) {
+      if (currentSource !== displayedSource) setDisplayedSource(currentSource);
+      return;
+    }
     if (displayedText === undefined && current !== undefined) {
       setDisplayedText(current);
+      setDisplayedSource(currentSource);
       return;
     }
     // Already fading out — the pending commit will pick up the latest value.
@@ -118,10 +129,11 @@ function RememberPage() {
     fadeTimer.current = setTimeout(() => {
       fadeTimer.current = null;
       setDisplayedText(currentRef.current);
+      setDisplayedSource(currentSourceRef.current);
       setWisdomAnim("in");
       setTimeout(() => setWisdomAnim("idle"), 280);
     }, 200);
-  }, [current, displayedText]);
+  }, [current, displayedText, currentSource, displayedSource]);
 
   const runSync = useCallback(
     async (phase: "loading" | "syncing" = "syncing", base?: WisdomMap) => {
@@ -181,19 +193,41 @@ function RememberPage() {
     }
   }, [items, order, cursor]);
 
+  const applyEditMode = (on: boolean) => {
+    setEditMode(on);
+    if (on) {
+      setDraft(currentEntry?.text ?? "");
+      setSourceDraft(currentEntry?.source ?? "");
+    } else {
+      setDraft("");
+      setSourceDraft("");
+    }
+  };
+
   const handleAdd = () => {
     const text = draft.trim();
     if (!text) return;
-    const key = randomKey();
+    const source = sourceDraft.trim();
+    const editing = editMode && currentKey && currentEntry;
+    const key = editing ? currentKey : randomKey();
     const newItems: WisdomMap = {
       ...items,
-      [key]: { text, op: "add", updatedAt: Date.now() },
+      [key]: {
+        text,
+        ...(source ? { source } : {}),
+        op: "add" as const,
+        updatedAt: Date.now(),
+      },
     };
     setItems(newItems);
     itemsRef.current = newItems;
-    const rest = order.slice(cursor + 1);
-    setOrder([...order.slice(0, cursor + 1), key, ...rest]);
+    if (!editing) {
+      const rest = order.slice(cursor + 1);
+      setOrder([...order.slice(0, cursor + 1), key, ...rest]);
+    }
     setDraft("");
+    setSourceDraft("");
+    setEditMode(false);
     setAddOpen(false);
     setMenuOpen(false);
     if (getGistToken()) void runSync("syncing", newItems);
@@ -271,6 +305,9 @@ function RememberPage() {
       label: "Add",
       icon: <Plus size={18} strokeWidth={2.2} />,
       onClick: () => {
+        setEditMode(false);
+        setDraft("");
+        setSourceDraft("");
         setAddOpen(true);
         closeMenu();
       },
@@ -395,9 +432,9 @@ function RememberPage() {
             Your collection is empty. Open the menu to add a piece of wisdom.
           </p>
         ) : (
-          <p
+          <div
             key={wisdomAnim === "idle" ? currentKey : `anim-${wisdomAnim}`}
-            className={`max-w-3xl text-balance text-3xl font-medium leading-snug tracking-tight sm:text-4xl md:text-5xl lg:text-6xl ${
+            className={`max-w-3xl ${
               wisdomAnim === "out"
                 ? "animate-[wisdom-fade-out_200ms_ease-out_forwards]"
                 : wisdomAnim === "in"
@@ -405,8 +442,15 @@ function RememberPage() {
                   : ""
             }`}
           >
-            {wisdomText}
-          </p>
+            <p className="text-balance text-3xl font-medium leading-snug tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
+              {wisdomText}
+            </p>
+            {displayedSource && (
+              <p className="mt-4 text-right text-base text-muted-foreground sm:text-lg md:text-xl">
+                {displayedSource}
+              </p>
+            )}
+          </div>
         )}
       </button>
 
@@ -425,7 +469,9 @@ function RememberPage() {
             className="w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-base font-medium">Add wisdom</h2>
+            <h2 className="text-base font-medium">
+              {editMode ? "Edit wisdom" : "Add wisdom"}
+            </h2>
             <textarea
               ref={textareaRef}
               value={draft}
@@ -437,12 +483,37 @@ function RememberPage() {
                 if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleAdd();
               }}
             />
+            <label className="mt-3 block text-xs font-medium text-muted-foreground">
+              Source <span className="opacity-60">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={sourceDraft}
+              onChange={(e) => setSourceDraft(e.target.value)}
+              placeholder="Who said it, or where it's from"
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") handleAdd();
+              }}
+            />
+            <label className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={editMode}
+                disabled={!currentEntry || current === undefined}
+                onChange={(e) => applyEditMode(e.target.checked)}
+                className="h-4 w-4 rounded border-input accent-primary disabled:opacity-40"
+              />
+              Edit the current item instead
+            </label>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setAddOpen(false);
                   setDraft("");
+                  setSourceDraft("");
+                  setEditMode(false);
                 }}
                 className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
               >
@@ -454,7 +525,7 @@ function RememberPage() {
                 disabled={!draft.trim()}
                 className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
               >
-                Add
+                {editMode ? "Save" : "Add"}
               </button>
             </div>
           </div>
